@@ -1,0 +1,40 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment secrets
+.env
+backend/.env
+frontend/.env
+
+# Database
+*.db
+*.sqlite3
+
+# Uploads / Vector DB
+uploads/
+faiss_db/
+chroma_db/
+
+# Node / React
+node_modules/
+dist/
+build/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Coverage / cache
+.pytest_cache/
+.mypy_cache/
