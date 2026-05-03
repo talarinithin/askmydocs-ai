@@ -7,17 +7,20 @@ from app.services.rag import process_pdf
 from pypdf import PdfReader
 import shutil
 import os
+from app.database import Base, engine
+from app.models import user
 
-# Create app first
 app = FastAPI(title="AskMyDocs AI API")
 
-# Add CORS after app creation
+# ✅ Startup event (important)
+@app.on_event("startup")
+def on_startup():
+    Base.metadata.create_all(bind=engine)
+
+# ✅ CORS (temporary open)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173"
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -51,7 +54,6 @@ def upload_file(
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    # Process PDF into vector DB
     process_pdf(file_path, current_user.id)
 
     return {
@@ -73,7 +75,6 @@ def read_pdf(
 
     for page in reader.pages:
         page_text = page.extract_text()
-
         if page_text:
             text += page_text + "\n"
 
