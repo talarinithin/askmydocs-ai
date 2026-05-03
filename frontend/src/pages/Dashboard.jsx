@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -18,23 +20,17 @@ export default function Dashboard() {
 
   const token = localStorage.getItem("token");
 
-  // 🔥 GET CURRENT USER
+  // GET USER
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await axios.get(
-          "http://127.0.0.1:8000/me",
-          {
-            headers: {
-              Authorization: "Bearer " + token,
-            },
-          }
-        );
+        const res = await axios.get("http://127.0.0.1:8000/me", {
+          headers: { Authorization: "Bearer " + token },
+        });
 
         const id = res.data.id;
         setUserId(id);
 
-        // 🔥 USER-SPECIFIC STORAGE KEY
         const storageKey = `chats_user_${id}`;
         const stored =
           JSON.parse(localStorage.getItem(storageKey)) || [];
@@ -48,7 +44,6 @@ export default function Dashboard() {
           newChat(id, stored);
         }
 
-        // Reset uploaded file per user
         setUploadedFile("");
       } catch {
         alert("Failed to load user");
@@ -58,17 +53,12 @@ export default function Dashboard() {
     fetchUser();
   }, []);
 
-  // 🔥 SAVE CHATS PER USER
   const saveChats = (updatedChats) => {
     const storageKey = `chats_user_${userId}`;
     setChatHistory(updatedChats);
-    localStorage.setItem(
-      storageKey,
-      JSON.stringify(updatedChats)
-    );
+    localStorage.setItem(storageKey, JSON.stringify(updatedChats));
   };
 
-  // 🔥 NEW CHAT
   const newChat = (id = userId, existing = chatHistory) => {
     const newChatObj = {
       id: Date.now(),
@@ -79,9 +69,8 @@ export default function Dashboard() {
     const updated = [newChatObj, ...existing];
     setChatHistory(updated);
 
-    const storageKey = `chats_user_${id}`;
     localStorage.setItem(
-      storageKey,
+      `chats_user_${id}`,
       JSON.stringify(updated)
     );
 
@@ -89,34 +78,18 @@ export default function Dashboard() {
     setMessages([]);
   };
 
-  // 🔥 SELECT CHAT
   const selectChat = (chat) => {
     setCurrentChatId(chat.id);
     setMessages(chat.messages);
   };
 
-  // 🔥 SMART SCROLL
-  const shouldAutoScroll = () => {
-    const el = chatContainerRef.current;
-    if (!el) return true;
-
-    return (
-      el.scrollHeight - el.scrollTop - el.clientHeight < 100
-    );
-  };
-
-  const scrollToBottom = () => {
+  // AUTO SCROLL
+  useEffect(() => {
     const el = chatContainerRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  };
-
-  useEffect(() => {
-    if (shouldAutoScroll()) {
-      scrollToBottom();
-    }
   }, [messages]);
 
-  // 🔥 UPLOAD PDF
+  // UPLOAD PDF
   const uploadPDF = async () => {
     if (!file) return alert("Choose PDF first");
 
@@ -130,9 +103,7 @@ export default function Dashboard() {
         "http://127.0.0.1:8000/upload",
         formData,
         {
-          headers: {
-            Authorization: "Bearer " + token,
-          },
+          headers: { Authorization: "Bearer " + token },
         }
       );
 
@@ -148,7 +119,7 @@ export default function Dashboard() {
     setLoading(false);
   };
 
-  // 🔥 ASK AI
+  // ASK AI
   const askAI = async () => {
     if (!question.trim()) return;
 
@@ -164,9 +135,7 @@ export default function Dashboard() {
         "http://127.0.0.1:8000/chat/ask",
         { question },
         {
-          headers: {
-            Authorization: "Bearer " + token,
-          },
+          headers: { Authorization: "Bearer " + token },
         }
       );
 
@@ -182,7 +151,7 @@ export default function Dashboard() {
               messages: finalMessages,
               title:
                 chat.title === "New Chat"
-                  ? question.slice(0, 20)
+                  ? question.slice(0, 25)
                   : chat.title,
             }
           : chat
@@ -199,7 +168,6 @@ export default function Dashboard() {
     setLoading(false);
   };
 
-  // 🔥 LOGOUT
   const logout = () => {
     localStorage.removeItem("token");
     window.location.href = "/login";
@@ -210,8 +178,10 @@ export default function Dashboard() {
 
       {/* Sidebar */}
       <div
-        className={`bg-white/10 backdrop-blur-xl border-r border-white/10 transition-all duration-500 ${
-          sidebarOpen ? "w-80 p-6" : "w-0 p-0 overflow-hidden"
+        className={`bg-white/10 backdrop-blur-xl border-r border-white/10 transition-all duration-300 ${
+          sidebarOpen
+            ? "w-80 p-6"
+            : "w-0 p-0 opacity-0 pointer-events-none"
         }`}
       >
         <h1 className="text-xl font-bold mb-4">
@@ -241,13 +211,23 @@ export default function Dashboard() {
           ))}
         </div>
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf"
-          onChange={(e) => setFile(e.target.files[0])}
-          className="mb-2 block w-full text-sm file:bg-cyan-500 file:text-black file:px-3 file:py-1 file:rounded"
-        />
+        {/* File Upload */}
+        <div className="mb-4">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf"
+            onChange={(e) => setFile(e.target.files[0])}
+            className="hidden"
+          />
+
+          <button
+            onClick={() => fileInputRef.current.click()}
+            className="w-full bg-white/10 border border-white/20 p-2 rounded-xl text-sm hover:bg-white/20"
+          >
+            {file ? `📄 ${file.name}` : "Choose PDF"}
+          </button>
+        </div>
 
         <button
           onClick={uploadPDF}
@@ -270,15 +250,18 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* Main Chat */}
+      {/* Main */}
       <div className="flex-1 flex flex-col">
 
         {/* Top Bar */}
         <div className="p-4 border-b border-white/10 flex items-center gap-4">
-          <button onClick={() => setSidebarOpen(!sidebarOpen)}>
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="bg-white/10 px-3 py-1 rounded-lg hover:bg-white/20"
+          >
             ☰
           </button>
-          <h2>AI Chat 🤖</h2>
+          <h2 className="font-semibold">AI Chat 🤖</h2>
         </div>
 
         {/* Messages */}
@@ -289,36 +272,44 @@ export default function Dashboard() {
           {messages.map((msg, i) => (
             <div
               key={i}
-              className={`max-w-2xl p-3 rounded-xl ${
+              className={`max-w-3xl px-4 py-3 rounded-2xl ${
                 msg.role === "user"
-                  ? "bg-cyan-500 text-black ml-auto"
-                  : "bg-white/10"
+                  ? "bg-gradient-to-r from-cyan-400 to-blue-500 text-black ml-auto"
+                  : "bg-white/10 border border-white/10"
               }`}
             >
-              {msg.text}
+              {msg.role === "bot" ? (
+                <div className="prose prose-invert max-w-none text-sm">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {msg.text}
+                  </ReactMarkdown>
+                </div>
+              ) : (
+                <p className="text-sm">{msg.text}</p>
+              )}
             </div>
           ))}
 
           {loading && (
-            <div className="bg-white/10 p-3 rounded-xl w-fit">
-              AI is typing...
+            <div className="bg-white/10 px-4 py-2 rounded-xl w-fit animate-pulse">
+              🤖 Thinking...
             </div>
           )}
         </div>
 
         {/* Input */}
-        <div className="p-4 border-t border-white/10 flex gap-2">
+        <div className="p-4 border-t border-white/10 flex gap-2 bg-black/30 backdrop-blur-lg">
           <input
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && askAI()}
-            placeholder="Ask something..."
-            className="flex-1 p-3 rounded-xl bg-white/10 outline-none"
+            placeholder="Ask anything..."
+            className="flex-1 px-4 py-3 rounded-xl bg-white/10 outline-none focus:ring-2 focus:ring-cyan-500"
           />
 
           <button
             onClick={askAI}
-            className="bg-cyan-500 text-black px-5 rounded-xl"
+            className="bg-gradient-to-r from-cyan-400 to-blue-500 px-6 rounded-xl text-black font-semibold"
           >
             Send
           </button>

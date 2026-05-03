@@ -1,1 +1,18 @@
 @import "tailwindcss";
+.ai-message {
+  background: #1e293b;
+  color: white;
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  line-height: 1.6;
+}
+
+.user-message {
+  background: linear-gradient(to right, #06b6d4, #3b82f6);
+  color: white;
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  text-align: right;
+}
